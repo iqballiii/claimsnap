@@ -89,7 +89,7 @@ class InsuranceClaim {
       notes: json['notes'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      vehicle: json['vehicles'] != null 
+      vehicle: json['vehicles'] != null
           ? Vehicle.fromJson(json['vehicles'] as Map<String, dynamic>)
           : null,
       claimant: json['claimant'] != null
@@ -105,7 +105,8 @@ class InsuranceClaim {
           : null,
       assessments: json['damage_assessments'] != null
           ? (json['damage_assessments'] as List)
-              .map((assess) => DamageAssessment.fromJson(assess as Map<String, dynamic>))
+              .map((assess) =>
+                  DamageAssessment.fromJson(assess as Map<String, dynamic>))
               .toList()
           : null,
     );
@@ -168,23 +169,29 @@ class InsuranceClaim {
   }
 
   String get statusDisplayName => status.displayName;
-  String get formattedEstimatedAmount => estimatedDamageAmount != null 
+  String get formattedEstimatedAmount => estimatedDamageAmount != null
       ? '\$${estimatedDamageAmount!.toStringAsFixed(2)}'
       : 'Pending';
-  String get formattedApprovedAmount => approvedAmount != null 
+  String get formattedApprovedAmount => approvedAmount != null
       ? '\$${approvedAmount!.toStringAsFixed(2)}'
       : 'Pending';
 
   ClaimImage? get primaryImage => images?.firstWhere(
-    (img) => img.isPrimary,
-    orElse: () => images?.isNotEmpty == true ? images!.first : ClaimImage.empty(),
-  );
+        (img) => img.isPrimary,
+        orElse: () =>
+            images?.isNotEmpty == true ? images!.first : ClaimImage.empty(),
+      );
 
   bool get hasImages => images?.isNotEmpty == true;
   int get imageCount => images?.length ?? 0;
 
-  bool get canEdit => [ClaimStatus.draft, ClaimStatus.submitted].contains(status);
-  bool get isActive => ![ClaimStatus.completed, ClaimStatus.cancelled, ClaimStatus.denied].contains(status);
+  bool get canEdit =>
+      [ClaimStatus.draft, ClaimStatus.submitted].contains(status);
+  bool get isActive => ![
+        ClaimStatus.completed,
+        ClaimStatus.cancelled,
+        ClaimStatus.denied
+      ].contains(status);
 }
 
 extension ClaimStatusExtension on ClaimStatus {
@@ -307,7 +314,7 @@ class Vehicle {
   }
 
   String get displayName => '$year $make $model';
-  String get formattedValue => estimatedValue != null 
+  String get formattedValue => estimatedValue != null
       ? '\$${estimatedValue!.toStringAsFixed(2)}'
       : 'N/A';
 }
@@ -436,11 +443,10 @@ class DamageAssessment {
     }
   }
 
-  String get formattedCost => estimatedCost != null 
+  String get formattedCost => estimatedCost != null
       ? '\$${estimatedCost!.toStringAsFixed(2)}'
       : 'Pending';
-  
-  String get confidencePercentage => confidenceScore != null 
-      ? '${(confidenceScore! * 100).round()}%'
-      : 'N/A';
+
+  String get confidencePercentage =>
+      confidenceScore != null ? '${(confidenceScore! * 100).round()}%' : 'N/A';
 }

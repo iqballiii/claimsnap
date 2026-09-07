@@ -93,7 +93,7 @@ class AppTheme {
     scaffoldBackgroundColor: backgroundLight,
     cardColor: cardLight,
     dividerColor: dividerLight,
-    appBarTheme: AppBarTheme(
+    appBarTheme: AppBarThemeData(
       backgroundColor: primaryLight,
       foregroundColor: Colors.white,
       elevation: 2.0,
@@ -104,7 +104,7 @@ class AppTheme {
         color: Colors.white,
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardLight,
       elevation: 2.0,
       shadowColor: shadowLight,
@@ -172,7 +172,7 @@ class AppTheme {
       ),
     ),
     textTheme: _buildTextTheme(isLight: true),
-    inputDecorationTheme: InputDecorationTheme(
+    inputDecorationTheme: InputDecorationThemeData(
       fillColor: surfaceLight,
       filled: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -257,7 +257,7 @@ class AppTheme {
       inactiveTrackColor: primaryLight.withValues(alpha: 0.3),
       trackHeight: 4.0,
     ),
-    tabBarTheme: TabBarTheme(
+    tabBarTheme: TabBarThemeData(
       labelColor: primaryLight,
       unselectedLabelColor: textSecondaryLight,
       indicatorColor: primaryLight,
@@ -333,7 +333,7 @@ class AppTheme {
     scaffoldBackgroundColor: backgroundDark,
     cardColor: cardDark,
     dividerColor: dividerDark,
-    appBarTheme: AppBarTheme(
+    appBarTheme: AppBarThemeData(
       backgroundColor: surfaceDark,
       foregroundColor: textPrimaryDark,
       elevation: 2.0,
@@ -344,7 +344,7 @@ class AppTheme {
         color: textPrimaryDark,
       ),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardDark,
       elevation: 2.0,
       shadowColor: shadowDark,
@@ -412,7 +412,7 @@ class AppTheme {
       ),
     ),
     textTheme: _buildTextTheme(isLight: false),
-    inputDecorationTheme: InputDecorationTheme(
+    inputDecorationTheme: InputDecorationThemeData(
       fillColor: surfaceDark,
       filled: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -497,7 +497,7 @@ class AppTheme {
       inactiveTrackColor: primaryDark.withValues(alpha: 0.3),
       trackHeight: 4.0,
     ),
-    tabBarTheme: TabBarTheme(
+    tabBarTheme: TabBarThemeData(
       labelColor: primaryDark,
       unselectedLabelColor: textSecondaryDark,
       indicatorColor: primaryDark,

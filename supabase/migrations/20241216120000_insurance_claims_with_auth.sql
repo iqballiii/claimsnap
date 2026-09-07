@@ -1,16 +1,27 @@
 -- Location: supabase/migrations/20241216120000_insurance_claims_with_auth.sql
 -- Insurance Claims Management System with Authentication
 
--- 1. Types and Enums
-CREATE TYPE public.user_role AS ENUM ('admin', 'manager', 'adjuster', 'customer');
-CREATE TYPE public.claim_status AS ENUM ('draft', 'submitted', 'under_review', 'pending_docs', 'approved', 'denied', 'processing_payment', 'completed', 'cancelled');
-CREATE TYPE public.damage_severity AS ENUM ('minor', 'moderate', 'major', 'total_loss');
-CREATE TYPE public.vehicle_type AS ENUM ('car', 'truck', 'motorcycle', 'suv', 'van', 'other');
+-- 1. Types and Enums (idempotent)
+DO $$ BEGIN
+  CREATE TYPE public.user_role AS ENUM ('admin', 'manager', 'adjuster', 'customer');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.claim_status AS ENUM ('draft', 'submitted', 'under_review', 'pending_docs', 'approved', 'denied', 'processing_payment', 'completed', 'cancelled');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.damage_severity AS ENUM ('minor', 'moderate', 'major', 'total_loss');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.vehicle_type AS ENUM ('car', 'truck', 'motorcycle', 'suv', 'van', 'other');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- 2. Core Tables
 
 -- User profiles table (intermediary for auth.users)
-CREATE TABLE public.user_profiles (
+CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT NOT NULL UNIQUE,
     full_name TEXT NOT NULL,
@@ -23,7 +34,7 @@ CREATE TABLE public.user_profiles (
 );
 
 -- Insurance policies table
-CREATE TABLE public.insurance_policies (
+CREATE TABLE IF NOT EXISTS public.insurance_policies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     policy_holder_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
     policy_number TEXT NOT NULL UNIQUE,
@@ -38,7 +49,7 @@ CREATE TABLE public.insurance_policies (
 );
 
 -- Vehicles table
-CREATE TABLE public.vehicles (
+CREATE TABLE IF NOT EXISTS public.vehicles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
     policy_id UUID REFERENCES public.insurance_policies(id) ON DELETE SET NULL,
@@ -56,7 +67,7 @@ CREATE TABLE public.vehicles (
 );
 
 -- Insurance claims table
-CREATE TABLE public.insurance_claims (
+CREATE TABLE IF NOT EXISTS public.insurance_claims (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     claim_number TEXT NOT NULL UNIQUE,
     policy_id UUID REFERENCES public.insurance_policies(id) ON DELETE RESTRICT,
@@ -78,24 +89,24 @@ CREATE TABLE public.insurance_claims (
 );
 
 -- Damage assessments table (AI generated and manual)
-CREATE TABLE public.damage_assessments (
+CREATE TABLE IF NOT EXISTS public.damage_assessments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     claim_id UUID REFERENCES public.insurance_claims(id) ON DELETE CASCADE,
     assessor_id UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
-    assessment_type TEXT DEFAULT 'ai_generated', -- 'ai_generated', 'manual', 'combined'
+    assessment_type TEXT DEFAULT 'ai_generated',
     severity public.damage_severity DEFAULT 'minor'::public.damage_severity,
     damage_description TEXT NOT NULL,
-    affected_areas JSONB, -- Array of vehicle parts affected
+    affected_areas JSONB,
     repair_recommendations TEXT,
     estimated_cost DECIMAL(10,2),
-    confidence_score DECIMAL(3,2), -- For AI assessments (0.00 to 1.00)
+    confidence_score DECIMAL(3,2),
     is_final BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Claim images table
-CREATE TABLE public.claim_images (
+CREATE TABLE IF NOT EXISTS public.claim_images (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     claim_id UUID REFERENCES public.insurance_claims(id) ON DELETE CASCADE,
     assessment_id UUID REFERENCES public.damage_assessments(id) ON DELETE SET NULL,
@@ -106,16 +117,16 @@ CREATE TABLE public.claim_images (
     image_type TEXT,
     description TEXT,
     is_primary BOOLEAN DEFAULT false,
-    metadata JSONB, -- EXIF data, GPS coordinates, etc.
+    metadata JSONB,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Claim timeline/activity table
-CREATE TABLE public.claim_activities (
+CREATE TABLE IF NOT EXISTS public.claim_activities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     claim_id UUID REFERENCES public.insurance_claims(id) ON DELETE CASCADE,
     user_id UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
-    activity_type TEXT NOT NULL, -- 'status_change', 'comment', 'document_upload', 'assessment_added'
+    activity_type TEXT NOT NULL,
     description TEXT NOT NULL,
     old_value TEXT,
     new_value TEXT,
@@ -123,20 +134,20 @@ CREATE TABLE public.claim_activities (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Essential Indexes
-CREATE INDEX idx_user_profiles_email ON public.user_profiles(email);
-CREATE INDEX idx_user_profiles_role ON public.user_profiles(role);
-CREATE INDEX idx_insurance_policies_holder ON public.insurance_policies(policy_holder_id);
-CREATE INDEX idx_insurance_policies_number ON public.insurance_policies(policy_number);
-CREATE INDEX idx_vehicles_owner ON public.vehicles(owner_id);
-CREATE INDEX idx_vehicles_policy ON public.vehicles(policy_id);
-CREATE INDEX idx_insurance_claims_claimant ON public.insurance_claims(claimant_id);
-CREATE INDEX idx_insurance_claims_status ON public.insurance_claims(status);
-CREATE INDEX idx_insurance_claims_number ON public.insurance_claims(claim_number);
-CREATE INDEX idx_insurance_claims_incident_date ON public.insurance_claims(incident_date);
-CREATE INDEX idx_damage_assessments_claim ON public.damage_assessments(claim_id);
-CREATE INDEX idx_claim_images_claim ON public.claim_images(claim_id);
-CREATE INDEX idx_claim_activities_claim ON public.claim_activities(claim_id);
+-- 3. Essential Indexes (idempotent)
+CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON public.user_profiles(email);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON public.user_profiles(role);
+CREATE INDEX IF NOT EXISTS idx_insurance_policies_holder ON public.insurance_policies(policy_holder_id);
+CREATE INDEX IF NOT EXISTS idx_insurance_policies_number ON public.insurance_policies(policy_number);
+CREATE INDEX IF NOT EXISTS idx_vehicles_owner ON public.vehicles(owner_id);
+CREATE INDEX IF NOT EXISTS idx_vehicles_policy ON public.vehicles(policy_id);
+CREATE INDEX IF NOT EXISTS idx_insurance_claims_claimant ON public.insurance_claims(claimant_id);
+CREATE INDEX IF NOT EXISTS idx_insurance_claims_status ON public.insurance_claims(status);
+CREATE INDEX IF NOT EXISTS idx_insurance_claims_number ON public.insurance_claims(claim_number);
+CREATE INDEX IF NOT EXISTS idx_insurance_claims_incident_date ON public.insurance_claims(incident_date);
+CREATE INDEX IF NOT EXISTS idx_damage_assessments_claim ON public.damage_assessments(claim_id);
+CREATE INDEX IF NOT EXISTS idx_claim_images_claim ON public.claim_images(claim_id);
+CREATE INDEX IF NOT EXISTS idx_claim_activities_claim ON public.claim_activities(claim_id);
 
 -- 4. RLS Setup
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
@@ -242,45 +253,44 @@ SELECT EXISTS (
 )
 $$;
 
--- 6. RLS Policies
-
--- User profiles: Users can view/edit own profile, admins can view all
+-- 6. RLS Policies (drop and recreate to be idempotent)
+DROP POLICY IF EXISTS "users_own_profile" ON public.user_profiles;
 CREATE POLICY "users_own_profile" ON public.user_profiles
 FOR ALL TO authenticated
 USING (auth.uid() = id OR public.is_admin())
 WITH CHECK (auth.uid() = id OR public.is_admin());
 
--- Insurance policies: Policy holders and admins can access
+DROP POLICY IF EXISTS "policy_access" ON public.insurance_policies;
 CREATE POLICY "policy_access" ON public.insurance_policies
 FOR ALL TO authenticated
 USING (public.owns_policy(id) OR public.is_adjuster_or_admin())
 WITH CHECK (public.owns_policy(id) OR public.is_adjuster_or_admin());
 
--- Vehicles: Vehicle owners and admins can access
+DROP POLICY IF EXISTS "vehicle_access" ON public.vehicles;
 CREATE POLICY "vehicle_access" ON public.vehicles
 FOR ALL TO authenticated
 USING (public.owns_vehicle(id) OR public.is_adjuster_or_admin())
 WITH CHECK (public.owns_vehicle(id) OR public.is_adjuster_or_admin());
 
--- Insurance claims: Claimants, assigned adjusters, and admins can access
+DROP POLICY IF EXISTS "claim_access" ON public.insurance_claims;
 CREATE POLICY "claim_access" ON public.insurance_claims
 FOR ALL TO authenticated
 USING (public.can_access_claim(id))
 WITH CHECK (public.can_access_claim(id));
 
--- Damage assessments: Same as claims access
+DROP POLICY IF EXISTS "assessment_access" ON public.damage_assessments;
 CREATE POLICY "assessment_access" ON public.damage_assessments
 FOR ALL TO authenticated
 USING (public.can_access_claim(claim_id))
 WITH CHECK (public.can_access_claim(claim_id));
 
--- Claim images: Same as claims access
+DROP POLICY IF EXISTS "image_access" ON public.claim_images;
 CREATE POLICY "image_access" ON public.claim_images
 FOR ALL TO authenticated
 USING (public.can_access_claim(claim_id))
 WITH CHECK (public.can_access_claim(claim_id));
 
--- Claim activities: Same as claims access
+DROP POLICY IF EXISTS "activity_access" ON public.claim_activities;
 CREATE POLICY "activity_access" ON public.claim_activities
 FOR ALL TO authenticated
 USING (public.can_access_claim(claim_id))
@@ -304,7 +314,8 @@ BEGIN
 END;
 $$;
 
--- Trigger for new user creation
+-- Trigger for new user creation (idempotent)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -322,7 +333,6 @@ DECLARE
 BEGIN
     year_suffix := EXTRACT(YEAR FROM CURRENT_DATE)::TEXT;
     
-    -- Get next sequence number for this year
     SELECT COALESCE(MAX(CAST(SUBSTRING(claim_number FROM 'CLM-' || year_suffix || '-(.*)') AS INTEGER)), 0) + 1
     INTO sequence_num
     FROM public.insurance_claims
@@ -348,7 +358,8 @@ BEGIN
 END;
 $$;
 
--- Trigger to set claim number before insert
+-- Trigger to set claim number before insert (idempotent)
+DROP TRIGGER IF EXISTS set_claim_number_trigger ON public.insurance_claims;
 CREATE TRIGGER set_claim_number_trigger
     BEFORE INSERT ON public.insurance_claims
     FOR EACH ROW EXECUTE FUNCTION public.set_claim_number();
@@ -365,23 +376,28 @@ BEGIN
 END;
 $$;
 
--- Triggers for updating timestamps
+-- Triggers for updating timestamps (idempotent)
+DROP TRIGGER IF EXISTS handle_updated_at_user_profiles ON public.user_profiles;
 CREATE TRIGGER handle_updated_at_user_profiles
     BEFORE UPDATE ON public.user_profiles
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS handle_updated_at_insurance_policies ON public.insurance_policies;
 CREATE TRIGGER handle_updated_at_insurance_policies
     BEFORE UPDATE ON public.insurance_policies
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS handle_updated_at_vehicles ON public.vehicles;
 CREATE TRIGGER handle_updated_at_vehicles
     BEFORE UPDATE ON public.vehicles
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS handle_updated_at_insurance_claims ON public.insurance_claims;
 CREATE TRIGGER handle_updated_at_insurance_claims
     BEFORE UPDATE ON public.insurance_claims
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS handle_updated_at_damage_assessments ON public.damage_assessments;
 CREATE TRIGGER handle_updated_at_damage_assessments
     BEFORE UPDATE ON public.damage_assessments
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -403,6 +419,12 @@ DECLARE
     assessment1_uuid UUID := gen_random_uuid();
     assessment2_uuid UUID := gen_random_uuid();
 BEGIN
+    -- Skip mock data if users already exist
+    IF EXISTS (SELECT 1 FROM auth.users WHERE email = 'user@claimsnap.com') THEN
+        RAISE NOTICE 'Mock data already exists, skipping.';
+        RETURN;
+    END IF;
+
     -- Create auth users with required fields
     INSERT INTO auth.users (
         id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,

@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../models/insurance_claim.dart';
-import '../../theme/app_theme.dart';
-import '../../utils/auth_provider.dart';
-import '../../utils/claims_service.dart';
-import '../../widgets/custom_icon_widget.dart';
 import './widgets/claim_card_widget.dart';
 import './widgets/dashboard_header_widget.dart';
 import './widgets/empty_state_widget.dart';

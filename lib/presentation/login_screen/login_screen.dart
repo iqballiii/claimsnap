@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
-import '../../theme/app_theme.dart';
-import '../../utils/auth_provider.dart';
 import './widgets/biometric_auth_widget.dart';
 import './widgets/login_form_widget.dart';
 import './widgets/logo_header_widget.dart';

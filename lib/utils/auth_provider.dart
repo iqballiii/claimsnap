@@ -95,10 +95,20 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
         break;
 
+      case AuthChangeEvent.userDeleted:
+        _currentUser = null;
+        _currentUserProfile = null;
+        _clearError();
+        notifyListeners();
+        break;
+
       case AuthChangeEvent.passwordRecovery:
       case AuthChangeEvent.tokenRefreshed:
       case AuthChangeEvent.initialSession:
         // Handle these events if needed
+        break;
+      case AuthChangeEvent.mfaChallengeVerified:
+        // Handle MFA challenge verified event if needed
         break;
     }
   }
@@ -299,5 +309,4 @@ class AuthProvider extends ChangeNotifier {
 
   /// Check if user is customer
   bool get isCustomer => _currentUserProfile?.isCustomer ?? true;
-
 }

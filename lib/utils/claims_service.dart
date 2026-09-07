@@ -27,26 +27,31 @@ class ClaimsService {
             claim_images(*),
             damage_assessments(*)
           ''')
-          .eq('claimant_id', user.id)
-          .order('created_at', ascending: false);
+          .eq('claimant_id', user.id);
 
+      // Apply status filter if provided
       if (status != null) {
         query = query.eq('status', status.dbValue);
       }
 
-      if (limit != null) {
-        query = query.limit(limit);
+      // Build final query with modifiers in one statement
+      if (limit != null && offset != null) {
+        return (await query
+            .range(offset, offset + limit - 1)
+            .order('created_at', ascending: false))
+            .map((claim) => InsuranceClaim.fromJson(claim as Map<String, dynamic>))
+            .toList();
+      } else if (limit != null) {
+        return (await query
+            .limit(limit)
+            .order('created_at', ascending: false))
+            .map((claim) => InsuranceClaim.fromJson(claim as Map<String, dynamic>))
+            .toList();
+      } else {
+        return (await query.order('created_at', ascending: false))
+            .map((claim) => InsuranceClaim.fromJson(claim as Map<String, dynamic>))
+            .toList();
       }
-
-      if (offset != null) {
-        query = query.range(offset, offset + (limit ?? 10) - 1);
-      }
-
-      final response = await query;
-      
-      return response
-          .map((claim) => InsuranceClaim.fromJson(claim as Map<String, dynamic>))
-          .toList();
     } catch (e) {
       throw Exception('Failed to get user claims: $e');
     }
@@ -57,7 +62,7 @@ class ClaimsService {
     try {
       final client = await _supabaseService.client;
       
-      final response = await client
+      final response = client
           .from('insurance_claims')
           .select('''
             *,
@@ -105,7 +110,7 @@ class ClaimsService {
         'notes': notes,
       };
 
-      final response = await client
+      final response = client
           .from('insurance_claims')
           .insert(claimData)
           .select('''
@@ -150,7 +155,7 @@ class ClaimsService {
       if (notes != null) updateData['notes'] = notes;
       if (status != null) updateData['status'] = status.dbValue;
 
-      final response = await client
+      final response = client
           .from('insurance_claims')
           .update(updateData)
           .eq('id', claimId)
@@ -278,21 +283,20 @@ class ClaimsService {
 
       // Run multiple count queries in parallel
       final results = await Future.wait([
-        // Total claims
+        // Total claims count
         client
             .from('insurance_claims')
             .select('*')
             .eq('claimant_id', user.id),
         
-        // Pending claims
+        // Pending claims count
         client
             .from('insurance_claims')
             .select('*')
             .eq('claimant_id', user.id)
-            .eq('status', 'submitted')
-            .or('status.eq.under_review,status.eq.pending_docs'),
+            .eq('status', 'submitted'),
         
-        // Approved claims
+        // Approved claims count
         client
             .from('insurance_claims')
             .select('*')
@@ -307,20 +311,18 @@ class ClaimsService {
             .eq('status', 'approved'),
       ]);
 
-      final totalClaims = results[0].count ?? 0;
-      final pendingClaims = results[1].count ?? 0;
-      final approvedClaims = results[2].count ?? 0;
+      final totalClaims = results[0].length;
+      final pendingClaims = results[1].length;
+      final approvedClaims = results[2].length;
       
       double totalApprovedAmount = 0.0;
-      if (results[3] is List) {
-        for (final claim in results[3] as List) {
-          final amount = claim['approved_amount'];
-          if (amount != null) {
-            totalApprovedAmount += (amount is num) ? amount.toDouble() : 0.0;
-          }
+      for (final claim in results[3] as List) {
+        final amount = claim['approved_amount'];
+        if (amount != null) {
+          totalApprovedAmount += (amount is num) ? amount.toDouble() : 0.0;
         }
       }
-
+    
       return {
         'total_claims': totalClaims,
         'pending_claims': pendingClaims,
@@ -373,7 +375,7 @@ class ClaimsService {
     try {
       final client = await _supabaseService.client;
       
-      final response = await client
+      final response = client
           .from('claim_activities')
           .select('''
             *,
